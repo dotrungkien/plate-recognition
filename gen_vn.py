@@ -167,7 +167,6 @@ def generate_code():
         random.choice(common.DIGITS),
         random.choice(common.DIGITS),
         random.choice(common.DIGITS))
-    print(plate_number)
     return plate_number
 
 def rounded_rect(shape, radius):
@@ -298,10 +297,10 @@ def generate_ims():
 
 
 if __name__ == "__main__":
-    for i in glob('validation/*'): os.remove(i)
+    for i in glob('train_datagen/*'): os.remove(i)
     im_gen = itertools.islice(generate_ims(), int(sys.argv[1]))
     for img_idx, (im, c, p) in enumerate(im_gen):
-        fname = "validation/{:08d}_{}_{}.png".format(img_idx, c,
+        fname = "train_datagen/{:08d}_{}_{}.png".format(img_idx, c,
                                                "1" if p else "0")
         if "X0591.55_1" not in fname: cv2.imwrite(fname, im * 255.)
 

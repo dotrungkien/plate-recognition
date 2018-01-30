@@ -62,8 +62,8 @@ def code_to_vec(p, code):
 def read_data(img_glob):
     for fname in sorted(glob.glob(img_glob)):
         im = cv2.imread(fname)[:, :, 0].astype(numpy.float32) / 255.
-        code = fname.split("/")[1][9:16]
-        p = fname.split("/")[1][17] == '1'
+        code = fname.split("/")[1].split('_')[1].replace('-','').replace('.','')
+        p = fname.split("/")[1].split('_')[-1].split('.')[0] == '1'
         yield im, code_to_vec(p, code)
 
 
@@ -114,8 +114,8 @@ def mpgen(f):
 def read_batches(batch_size):
     g = gen.generate_ims()
     def gen_vecs():
-        for im, c, p in itertools.islice(g, batch_size):
-            yield im, code_to_vec(p, c)
+        for im, c, p in itertools.islice(g, batch_size*2):
+            yield im, code_to_vec(p, c.replace('-','').replace('.',''))
 
     while True:
         yield unzip(gen_vecs())
@@ -226,7 +226,7 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
         if initial_weights is not None:
             sess.run(assign_ops)
 
-        test_xs, test_ys = unzip(list(read_data("test/*.png"))[:50])
+        test_xs, test_ys = unzip(list(read_data("train_datagen/*.png"))[:50])
 
         try:
             last_batch_idx = 0
