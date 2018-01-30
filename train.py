@@ -114,7 +114,7 @@ def mpgen(f):
 def read_batches(batch_size):
     g = gen.generate_ims()
     def gen_vecs():
-        for im, c, p in itertools.islice(g, batch_size*2):
+        for im, c, p in itertools.islice(g, batch_size):
             yield im, code_to_vec(p, c.replace('-','').replace('.',''))
 
     while True:
@@ -226,7 +226,7 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
         if initial_weights is not None:
             sess.run(assign_ops)
 
-        test_xs, test_ys = unzip(list(read_data("train_datagen/*.png"))[:50])
+        test_xs, test_ys = unzip(list(read_data("train_datagen/*.png"))[:batch_size])
 
         try:
             last_batch_idx = 0
@@ -259,6 +259,6 @@ if __name__ == "__main__":
 
     train(learn_rate=0.001,
           report_steps=20,
-          batch_size=50,
+          batch_size= 100,#50,
           initial_weights=initial_weights)
 

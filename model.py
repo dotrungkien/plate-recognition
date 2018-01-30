@@ -38,7 +38,7 @@ import common
 
 
 # WINDOW_SHAPE = (64, 128)
-WINDOW_SHAPE = (180, 220)
+WINDOW_SHAPE = (96, 120)
 
 
 # Utility functions
@@ -113,10 +113,11 @@ def get_training_model():
     x, conv_layer, conv_vars = convolutional_layers()
     
     # Densely connected layer
-    W_fc1 = weight_variable([32 * 8 * 128, 2048])
+    # W_fc1 = weight_variable([32 * 8 * 128, 2048])
+    W_fc1 = weight_variable([30 * 12 * 128, 2048])
     b_fc1 = bias_variable([2048])
 
-    conv_layer_flat = tf.reshape(conv_layer, [-1, 32 * 8 * 128])
+    conv_layer_flat = tf.reshape(conv_layer, [-1, 30 * 12 * 128])
     h_fc1 = tf.nn.relu(tf.matmul(conv_layer_flat, W_fc1) + b_fc1)
 
     # Output layer
@@ -140,8 +141,8 @@ def get_detect_model():
     x, conv_layer, conv_vars = convolutional_layers()
     
     # Fourth layer
-    W_fc1 = weight_variable([8 * 32 * 128, 2048])
-    W_conv1 = tf.reshape(W_fc1, [8,  32, 128, 2048])
+    W_fc1 = weight_variable([12 * 30 * 128, 2048])
+    W_conv1 = tf.reshape(W_fc1, [12, 30, 128, 2048])
     b_fc1 = bias_variable([2048])
     h_conv1 = tf.nn.relu(conv2d(conv_layer, W_conv1,
                                 stride=(1, 1), padding="VALID") + b_fc1) 

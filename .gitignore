@@ -1,3 +1,5 @@
+*.npz
+train_datagen/
 validation/
 test/
 train/

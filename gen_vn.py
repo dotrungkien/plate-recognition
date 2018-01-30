@@ -52,16 +52,18 @@ import common
 FONT_DIR = "./fonts"
 FONT_HEIGHT = 32  # Pixel size to which the chars are resized
 
-OUTPUT_SHAPE = (200, 240)
+OUTPUT_SHAPE = (96, 120)
 
 CHARS = common.CHARS + " .-"
 
-def make_char_ims(font_path, output_height):
-    font_size = output_height * 4
+PROVINCE_CODES = ['11', '12', '13', '98', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '43', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '81', '82', '83', '84', '85', '86', '88', '89', '90', '92', '93', '94', '95', '97', '99']
 
+
+def make_char_ims(font_path, output_height):
+    font_size = output_height * 4 # 128
     font = ImageFont.truetype(font_path, font_size)
 
-    height = max(font.getsize(c)[1] for c in CHARS)
+    height = max(font.getsize(c)[1] for c in CHARS) # 90
     for c in CHARS:
         width = font.getsize(c)[0]
         im = Image.new("RGBA", (width, height), (0, 0, 0))
@@ -157,9 +159,9 @@ def make_affine_transform(from_shape, to_shape,
 
 
 def generate_code():
-    plate_number = "{}{}-{}{}{}{}{}.{}{}".format(
-        random.choice(common.DIGITS),
-        random.choice(common.DIGITS),
+    province_code = PROVINCE_CODES[random.choice(range(len(PROVINCE_CODES)))]
+    plate_number = "{}-{}{}{}{}{}.{}{}".format(
+        province_code,
         random.choice(common.LETTERS),
         random.choice(common.DIGITS),
         random.choice(common.DIGITS),
@@ -185,55 +187,49 @@ def rounded_rect(shape, radius):
 
 
 def generate_plate(font_height, char_ims):
-    try:
-        h_padding = random.uniform(0.2, 0.4) * font_height
-        v_padding = random.uniform(0.1, 0.3) * font_height
-        spacing = font_height * random.uniform(-0.05, 0.05)
-        radius = 1 + int(font_height * 0.1 * random.random())
+    h_padding = random.uniform(0.2, 0.4) * font_height
+    v_padding = random.uniform(0.1, 0.3) * font_height
+    spacing = font_height * random.uniform(-0.05, 0.05)
+    radius = 1 + int(font_height * 0.1 * random.random())
 
-        code = generate_code()
-        # text_width = sum(char_ims[c].shape[1] for c in code if c in char_ims)
-        text_width = sum(char_ims[c].shape[1] for c in code[5:] if c in char_ims)
-        text_width += (len(code) - 1) * spacing * 2
+    code = generate_code()
+    text_width_up = sum(char_ims[c].shape[1] for c in code[:5] if c in char_ims)
+    text_width_up += (len(code[:5]) - 1) * spacing
+    text_width_down = sum(char_ims[c].shape[1] for c in code[5:] if c in char_ims)
+    text_width_down += (len(code[5:]) - 1) * spacing
+    # text_width = sum(char_ims[c].shape[1] for c in code if c in char_ims)
+    # text_width = sum(char_ims[c].shape[1] for c in code[5:] if c in char_ims)
+    text_width = max(text_width_up, text_width_down)
 
-        out_shape = (int(font_height*2 + v_padding*3),int(text_width + h_padding*2))
+    out_shape = (int(font_height*2 + v_padding*3),int(text_width + h_padding*2))
 
-        text_color, plate_color = pick_colors()
-        
-        text_mask = numpy.zeros(out_shape)
-        
-        x = h_padding + 10
-        y = v_padding 
-        for c in code[:5]:
-            if c in char_ims:
-                char_im = char_ims[c]
-                ix, iy = int(x), int(y)
-                text_mask[iy:iy + char_im.shape[0], 
-                        ix:ix + char_im.shape[1]] = char_im
-                x += char_im.shape[1] + spacing
+    text_color, plate_color = pick_colors()
+    
+    text_mask = numpy.zeros(out_shape)
+    
+    x = h_padding + h_padding
+    y = v_padding 
+    for c in code[:5]:
+        if c in char_ims:
+            char_im = char_ims[c]
+            ix, iy = int(x), int(y)
+            text_mask[iy:iy + char_im.shape[0], ix:ix + char_im.shape[1]] = char_im
+            x += char_im.shape[1] + spacing
 
-        x = h_padding
-        y = v_padding + 36                 
-        for c in code[5:]:
-            if c in char_ims:
-                char_im = char_ims[c]
-                ix, iy = int(x), int(y)
-                text_mask[iy:iy + char_im.shape[0], ix:ix + char_im.shape[1]] = char_im
-                x += char_im.shape[1] + spacing
+    x = h_padding
+    y = v_padding + v_padding + font_height
+    for c in code[5:]:
+        if c in char_ims:
+            char_im = char_ims[c]
+            ix, iy = int(x), int(y)
+            text_mask[iy:iy + char_im.shape[0], ix:ix + char_im.shape[1]] = char_im
+            x += char_im.shape[1] + spacing
 
-        
-        plate = (numpy.ones(out_shape) * plate_color * (1. - text_mask) +
-                numpy.ones(out_shape) * text_color * text_mask)
-        
-        # return_obj = {'plt':plate, 'rr':rounded_rect(out_shape, radius), 'cr':code.replace(" ", "")}
-        # with open('default_plate.pkl', 'wb') as f:
-        #     pickle.dump(return_obj, f)
-        return plate, rounded_rect(out_shape, radius), code.replace(" ", "")    
-    except:
-        with open('default_plate.pkl', 'rb') as f:
-            return_obj = pickle.load(f)
-        return return_obj['plt'], return_obj['rr'], return_obj['cr']
-
+    
+    plate = (numpy.ones(out_shape) * plate_color * (1. - text_mask) +
+            numpy.ones(out_shape) * text_color * text_mask)
+    
+    return plate, rounded_rect(out_shape, radius), code.replace(" ", "")    
 
 
 def generate_bg(num_bg_images):
@@ -260,8 +256,8 @@ def generate_im(char_ims, num_bg_images):
     M, out_of_bounds = make_affine_transform(
                             from_shape=plate.shape,
                             to_shape=bg.shape,
-                            min_scale=0.6,
-                            max_scale=0.875,
+                            min_scale=0.8, # 0.6
+                            max_scale= 1.0, #0.875,
                             rotation_variation=1.0,
                             scale_variation=1.2,
                             translation_variation=1.0)
@@ -297,10 +293,11 @@ def generate_ims():
 
 
 if __name__ == "__main__":
-    for i in glob('train_datagen/*'): os.remove(i)
-    im_gen = itertools.islice(generate_ims(), int(sys.argv[1]))
+    folder_name = sys.argv[1]
+    for i in glob('{}/*'.format(folder_name)): os.remove(i)
+    im_gen = itertools.islice(generate_ims(), int(sys.argv[2]))
     for img_idx, (im, c, p) in enumerate(im_gen):
-        fname = "train_datagen/{:08d}_{}_{}.png".format(img_idx, c,
-                                               "1" if p else "0")
-        if "X0591.55_1" not in fname: cv2.imwrite(fname, im * 255.)
+        fname = "{}/{:08d}_{}_{}.png".format(
+            folder_name, img_idx, c, "1" if p else "0")
+        cv2.imwrite(fname, im * 255.)
 
