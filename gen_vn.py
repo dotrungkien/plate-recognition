@@ -40,6 +40,8 @@ import sys
 import shutil
 import cv2
 import numpy
+from glob import glob
+import pickle
 
 from PIL import Image
 from PIL import ImageDraw
@@ -50,10 +52,9 @@ import common
 FONT_DIR = "./fonts"
 FONT_HEIGHT = 32  # Pixel size to which the chars are resized
 
-OUTPUT_SHAPE = (128, 256)
+OUTPUT_SHAPE = (200, 240)
 
-CHARS = common.CHARS + " "
-
+CHARS = common.CHARS + " .-"
 
 def make_char_ims(font_path, output_height):
     font_size = output_height * 4
@@ -61,7 +62,6 @@ def make_char_ims(font_path, output_height):
     font = ImageFont.truetype(font_path, font_size)
 
     height = max(font.getsize(c)[1] for c in CHARS)
-
     for c in CHARS:
         width = font.getsize(c)[0]
         im = Image.new("RGBA", (width, height), (0, 0, 0))
@@ -157,7 +157,7 @@ def make_affine_transform(from_shape, to_shape,
 
 
 def generate_code():
-    plate_number = "{}{}-{}{}\n{}{}{}.{}{}""".format(
+    plate_number = "{}{}-{}{}{}{}{}.{}{}".format(
         random.choice(common.DIGITS),
         random.choice(common.DIGITS),
         random.choice(common.LETTERS),
@@ -186,35 +186,55 @@ def rounded_rect(shape, radius):
 
 
 def generate_plate(font_height, char_ims):
-    h_padding = random.uniform(0.2, 0.4) * font_height
-    v_padding = random.uniform(0.1, 0.3) * font_height
-    spacing = font_height * random.uniform(-0.05, 0.05)
-    radius = 1 + int(font_height * 0.1 * random.random())
+    try:
+        h_padding = random.uniform(0.2, 0.4) * font_height
+        v_padding = random.uniform(0.1, 0.3) * font_height
+        spacing = font_height * random.uniform(-0.05, 0.05)
+        radius = 1 + int(font_height * 0.1 * random.random())
 
-    code = generate_code()
-    text_width = sum(char_ims[c].shape[1] for c in code if c in char_ims)
-    text_width += (len(code) - 1) * spacing
+        code = generate_code()
+        # text_width = sum(char_ims[c].shape[1] for c in code if c in char_ims)
+        text_width = sum(char_ims[c].shape[1] for c in code[5:] if c in char_ims)
+        text_width += (len(code) - 1) * spacing * 2
 
-    out_shape = (int(font_height + v_padding * 2),
-                 int(text_width + h_padding * 2))
+        out_shape = (int(font_height*2 + v_padding*3),int(text_width + h_padding*2))
 
-    text_color, plate_color = pick_colors()
-    
-    text_mask = numpy.zeros(out_shape)
-    
-    x = h_padding
-    y = v_padding 
-    for c in code:
-        if c in char_ims:
-            char_im = char_ims[c]
-            ix, iy = int(x), int(y)
-            text_mask[iy:iy + char_im.shape[0], ix:ix + char_im.shape[1]] = char_im
-            x += char_im.shape[1] + spacing
+        text_color, plate_color = pick_colors()
+        
+        text_mask = numpy.zeros(out_shape)
+        
+        x = h_padding + 10
+        y = v_padding 
+        for c in code[:5]:
+            if c in char_ims:
+                char_im = char_ims[c]
+                ix, iy = int(x), int(y)
+                text_mask[iy:iy + char_im.shape[0], 
+                        ix:ix + char_im.shape[1]] = char_im
+                x += char_im.shape[1] + spacing
 
-    plate = (numpy.ones(out_shape) * plate_color * (1. - text_mask) +
-             numpy.ones(out_shape) * text_color * text_mask)
+        x = h_padding
+        y = v_padding + 36                 
+        for c in code[5:]:
+            if c in char_ims:
+                char_im = char_ims[c]
+                ix, iy = int(x), int(y)
+                text_mask[iy:iy + char_im.shape[0], ix:ix + char_im.shape[1]] = char_im
+                x += char_im.shape[1] + spacing
 
-    return plate, rounded_rect(out_shape, radius), code.replace(" ", "")
+        
+        plate = (numpy.ones(out_shape) * plate_color * (1. - text_mask) +
+                numpy.ones(out_shape) * text_color * text_mask)
+        
+        # return_obj = {'plt':plate, 'rr':rounded_rect(out_shape, radius), 'cr':code.replace(" ", "")}
+        # with open('default_plate.pkl', 'wb') as f:
+        #     pickle.dump(return_obj, f)
+        return plate, rounded_rect(out_shape, radius), code.replace(" ", "")    
+    except:
+        with open('default_plate.pkl', 'rb') as f:
+            return_obj = pickle.load(f)
+        return return_obj['plt'], return_obj['rr'], return_obj['cr']
+
 
 
 def generate_bg(num_bg_images):
@@ -244,8 +264,8 @@ def generate_im(char_ims, num_bg_images):
                             min_scale=0.6,
                             max_scale=0.875,
                             rotation_variation=1.0,
-                            scale_variation=1.5,
-                            translation_variation=1.2)
+                            scale_variation=1.2,
+                            translation_variation=1.0)
     plate = cv2.warpAffine(plate, M, (bg.shape[1], bg.shape[0]))
     plate_mask = cv2.warpAffine(plate_mask, M, (bg.shape[1], bg.shape[0]))
 
@@ -270,13 +290,6 @@ def load_fonts(folder_path):
 
 
 def generate_ims():
-    """
-    Generate number plate images.
-
-    :return:
-        Iterable of number plate images.
-
-    """
     variation = 1.0
     fonts, font_char_ims = load_fonts(FONT_DIR)
     num_bg_images = len(os.listdir("bgs"))
@@ -285,13 +298,10 @@ def generate_ims():
 
 
 if __name__ == "__main__":
-    if os.path.exists("test"):
-        shutil.rmtree("test")
-    os.mkdir("test")
+    for i in glob('validation/*'): os.remove(i)
     im_gen = itertools.islice(generate_ims(), int(sys.argv[1]))
     for img_idx, (im, c, p) in enumerate(im_gen):
-        fname = "test/{:08d}_{}_{}.png".format(img_idx, c,
+        fname = "validation/{:08d}_{}_{}.png".format(img_idx, c,
                                                "1" if p else "0")
-        print fname
-        cv2.imwrite(fname, im * 255.)
+        if "X0591.55_1" not in fname: cv2.imwrite(fname, im * 255.)
 
