@@ -33,7 +33,6 @@ __all__ = (
 
 
 import tensorflow as tf
-
 import common
 
 
@@ -68,10 +67,6 @@ def avg_pool(x, ksize=(2, 2), stride=(2, 2)):
 
 
 def convolutional_layers():
-    """
-    Get the convolutional layers of the model.
-
-    """
     x = tf.placeholder(tf.float32, [None, None, None])
 
     # First layer
@@ -101,19 +96,7 @@ def convolutional_layers():
 
 
 def get_training_model():
-    """
-    The training model acts on a batch of 128x64 windows, and outputs a (1 +
-    7 * len(common.CHARS) vector, `v`. `v[0]` is the probability that a plate is
-    fully within the image and is at the correct scale.
-    
-    `v[1 + i * len(common.CHARS) + c]` is the probability that the `i`'th
-    character is `c`.
-
-    """
     x, conv_layer, conv_vars = convolutional_layers()
-    
-    # Densely connected layer
-    # W_fc1 = weight_variable([32 * 8 * 128, 2048])
     W_fc1 = weight_variable([30 * 12 * 128, 2048])
     b_fc1 = bias_variable([2048])
 
@@ -130,14 +113,6 @@ def get_training_model():
 
 
 def get_detect_model():
-    """
-    The same as the training model, except it acts on an arbitrarily sized
-    input, and slides the 128x64 window across the image in 8x8 strides.
-
-    The output is of the form `v`, where `v[i, j]` is equivalent to the output
-    of the training model, for the window at coordinates `(8 * i, 4 * j)`.
-
-    """
     x, conv_layer, conv_vars = convolutional_layers()
     
     # Fourth layer

@@ -165,6 +165,7 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
 
     """
     x, y, params = model.get_training_model()
+
     y_ = tf.placeholder(tf.float32, [None, 9 * len(common.CHARS) + 1])
 
     digits_loss, presence_loss, loss = get_loss(y, y_)
@@ -178,8 +179,6 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
         assign_ops = [w.assign(v) for w, v in zip(params, initial_weights)]
 
     init = tf.global_variables_initializer()
-
-    test_xs, test_ys = unzip(list(read_data("validation/*.png")))
 
     def vec_to_plate(v):
         return "".join(common.CHARS[i] for i in v)
@@ -199,7 +198,7 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
                             numpy.logical_and(r[2] < 0.5,
                                               r[3] < 0.5)))
         # r_short = (r[0][:190], r[1][:190], r[2][:190], r[3][:190])
-        r_short = (r[0][:20], r[1][:20], r[2][:20], r[3][:20])
+        r_short = (r[0][:10], r[1][:10], r[2][:10], r[3][:10])
         for b, c, pb, pc in zip(*r_short):
             print "{} {} <-> {} {}".format(vec_to_plate(c), pc,
                                            vec_to_plate(b), float(pb))
@@ -226,6 +225,8 @@ def train(learn_rate, report_steps, batch_size, initial_weights=None):
         sess.run(init)
         if initial_weights is not None:
             sess.run(assign_ops)
+
+        test_xs, test_ys = unzip(list(read_data("validation/*.png")))
 
         try:
             last_batch_idx = 0
@@ -258,6 +259,6 @@ if __name__ == "__main__":
 
     train(learn_rate=0.001,
           report_steps=100,
-          batch_size=50,
+          batch_size=128,
           initial_weights=initial_weights)
 
