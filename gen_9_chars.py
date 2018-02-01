@@ -54,7 +54,7 @@ FONT_HEIGHT = 32
 
 OUTPUT_SHAPE = (96, 120)
 
-CHARS = common.CHARS + " .-"
+CHARS = common.CHARS + " "
 
 PROVINCE_CODES = ['11', '12', '13', '98', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '43', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '81', '82', '83', '84', '85', '86', '88', '89', '90', '92', '93', '94', '95', '97', '99']
 
@@ -122,8 +122,8 @@ def make_affine_transform(from_shape, to_shape,
                            (max_scale - min_scale) * 0.5 * scale_variation,
                            (min_scale + max_scale) * 0.5 +
                            (max_scale - min_scale) * 0.5 * scale_variation)
-    if scale > max_scale or scale < min_scale:
-        out_of_bounds = True
+    # if scale > max_scale or scale < min_scale:
+    #     out_of_bounds = True
     roll = random.uniform(-0.3, 0.3) * rotation_variation
     pitch = random.uniform(-0.2, 0.2) * rotation_variation
     yaw = random.uniform(-1.2, 1.2) * rotation_variation
@@ -144,7 +144,8 @@ def make_affine_transform(from_shape, to_shape,
     # the output shape's bounds.
     trans = (numpy.random.random((2,1)) - 0.5) * translation_variation
     trans = ((2.0 * trans) ** 5.0) / 2.0
-    if numpy.any(trans < -0.5) or numpy.any(trans > 0.5):
+    # if numpy.any(trans < -0.5) or numpy.any(trans > 0.5):
+    if numpy.any(trans < -0.8) or numpy.any(trans > 0.8):
         out_of_bounds = True
     trans = (to_size - skewed_size * scale) * trans
 
@@ -160,7 +161,7 @@ def make_affine_transform(from_shape, to_shape,
 
 def generate_code():
     province_code = PROVINCE_CODES[random.choice(range(len(PROVINCE_CODES)))]
-    plate_number = "{}-{}{}{}{}{}.{}{}".format(
+    plate_number = "{} {}{}{}{}{} {}{}".format(
         province_code,
         random.choice(common.LETTERS),
         random.choice(common.DIGITS),
@@ -256,11 +257,11 @@ def generate_im(char_ims, num_bg_images):
     M, out_of_bounds = make_affine_transform(
                             from_shape=plate.shape,
                             to_shape=bg.shape,
-                            min_scale=0.8, # 0.6
-                            max_scale= 1.0, #0.875,
+                            min_scale=0.75, #0.6
+                            max_scale=1, #0.875,
                             rotation_variation=1.0,
-                            scale_variation=1.2,
-                            translation_variation=1.0)
+                            scale_variation=1.5,
+                            translation_variation=1.2)
     plate = cv2.warpAffine(plate, M, (bg.shape[1], bg.shape[0]))
     plate_mask = cv2.warpAffine(plate_mask, M, (bg.shape[1], bg.shape[0]))
 
@@ -276,7 +277,7 @@ def generate_im(char_ims, num_bg_images):
 
 def load_fonts(folder_path):
     font_char_ims = {}
-    fonts = [f for f in os.listdir(folder_path) if f.endswith('.ttf')]
+    fonts = [f for f in os.listdir(folder_path) if f.endswith('.TTF')]
     for font in fonts:
         font_char_ims[font] = dict(make_char_ims(os.path.join(folder_path,
                                                               font),

@@ -168,31 +168,50 @@ def post_process(matches):
 def letter_probs_to_code(letter_probs):
     return "".join(common.CHARS[i] for i in numpy.argmax(letter_probs, axis=1))
 
-def detect_im(im_name, weights_file='weights.npz'):
-    im = cv2.imread(im_name)
+def detect_im(im_path, param_vals):
+    im_name = im_path.split("/")[-1]
+    print im_name
+    im = cv2.imread(im_path)
     im_gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) / 255.
-    f = numpy.load(weights_file)
-    param_vals = [f[n] for n in sorted(f.files, key=lambda s: int(s[4:]))]
     code = None
-    print("----------------------")
-    print("Expected plate numbers: {}-{} {}.{}".format(im_name[:2], im_name[3:5], 
-                                                     im_name[5:8], im_name[9:11]))
     for pt1, pt2, present_prob, letter_probs in post_process(
                                                   detect(im_gray, param_vals)):
+        pt1 = tuple(reversed(map(int, pt1)))
+        pt2 = tuple(reversed(map(int, pt2)))
         code = letter_probs_to_code(letter_probs)
-        print("Found plate numbers:    {}-{} {}.{}".format(code[:2], code[2:4], 
-                                                     code[4:7], code[7:]))
+        color = (0.0, 255.0, 0.0)
+        cv2.rectangle(im, pt1, pt2, color)
+
+        cv2.putText(im,
+                    code,
+                    pt1,
+                    cv2.FONT_HERSHEY_PLAIN, 
+                    1.5,
+                    (0, 0, 0),
+                    thickness=5)
+
+        cv2.putText(im,
+                    code,
+                    pt1,
+                    cv2.FONT_HERSHEY_PLAIN, 
+                    1.5,
+                    (255, 255, 255),
+                    thickness=2)
     if not code:
         print("Plate numbers not found!")
+    cv2.imwrite("output/{}".format(im_name), im)
+
 
 
 if __name__ == "__main__":
-    # im_names = glob('*.png')
+    # im_paths = sorted(glob('test/*.jpg'))
+    # weights_file = "weights.npz"
     # if len(sys.argv) > 2:
     #     weights_file = sys.argv[1] 
-    #     for im_name in im_names: detect_im(im_name, weights_file)
-    # else:
-    #     for im_name in im_names: detect_im(im_name)
+    # f = numpy.load(weights_file)
+    # param_vals = [f[n] for n in sorted(f.files, key=lambda s: int(s[4:]))]
+    # for im_path in im_paths: 
+    #     detect_im(im_path, param_vals)
     im = cv2.imread(sys.argv[1])
     im_gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY) / 255.
     f = numpy.load(sys.argv[2])
@@ -226,7 +245,6 @@ if __name__ == "__main__":
     if not code:
         print("Plate numbers not found!")
     cv2.imwrite(sys.argv[3], im)
-    cv2.imwrite("out.jpg", im)
 
 
 
